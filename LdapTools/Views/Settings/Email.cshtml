@@ -1,0 +1,70 @@
+﻿@model EmailSettings
+
+@{
+    ViewData["Title"] = "Configurações de envio de e-mail";
+}
+
+<header class="header header-sticky p-0 mb-4">
+    <div class="container-fluid px-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb my-0">
+                <li class="breadcrumb-item">
+                    <a data-coreui-i18n="home" asp-controller="Home" asp-action="Index">Home</a>
+                </li>
+                <li class="breadcrumb-item active">
+                    <span data-coreui-i18n="dashboard">E-mail</span>
+                </li>
+            </ol>
+        </nav>
+    </div>
+</header>
+
+<div>
+    <div class="container-lg px-4">
+        <div class="card mb-4">
+            <div class="card-header"><strong>@ViewData["Title"]</strong></div>
+            <div class="card-body">
+                <form id="formEmail" enctype="multipart/form-data" asp-action="Email">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <div class="form-group">
+                        <label asp-for="SmtpServer" class="control-label"></label>
+                        <input asp-for="SmtpServer" class="form-control" />
+                        <span asp-validation-for="SmtpServer" class="text-danger"></span>
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="SmtpPort" class="control-label"></label>
+                        <input asp-for="SmtpPort" class="form-control" />
+                        <span asp-validation-for="SmtpPort" class="text-danger"></span>
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="SenderName" class="control-label"></label>
+                        <input asp-for="SenderName" class="form-control" />
+                        <span asp-validation-for="SenderName" class="text-danger"></span>
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="SenderEmail" class="control-label"></label>
+                        <input asp-for="SenderEmail" class="form-control" />
+                        <span asp-validation-for="SenderEmail" class="text-danger"></span>
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="Username" class="control-label"></label>
+                        <input asp-for="Username" class="form-control" />
+                        <span asp-validation-for="Username" class="text-danger"></span>
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="Password" class="control-label"></label>
+                        <input asp-for="Password" class="form-control" />
+                        <span asp-validation-for="Password" class="text-danger"></span>
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="EnableSsl" class="control-label"></label>
+                        <input asp-for="EnableSsl" type="checkbox" class="form-check-input" />
+                    </div>
+                </form>
+            </div>
+            <div class="form-group modal-footer">
+                <input type="submit" form="formEmail" value="Salvar" class="btn btn-success" />
+            </div>
+        </div>
+    </div>
+</div>

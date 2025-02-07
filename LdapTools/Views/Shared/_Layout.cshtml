@@ -1,0 +1,84 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - LdapTools</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link href="~/lib/select2/css/select2.min.css" rel="stylesheet">
+    <link href="~/lib/select2/css/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="d-flex flex-column">
+    <div class="wrapper d-flex flex-grow-1">
+        <aside id="sidebar" class="d-flex flex-column">
+            <div class="d-flex">
+                <button class="toggle-btn" type="button">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="sidebar-logo">
+                    <a href="#">LdapTools</a>
+                </div>
+            </div>
+            <ul class="sidebar-nav">
+                <li class="sidebar-item">
+                    <a class="sidebar-link" asp-controller="Account" asp-action="Profile">
+                        <i class="fa-regular fa-user"></i>
+                        <span>Perfil</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" asp-controller="Users" asp-action="Index">
+                        <i class="fa-solid fa-users"></i>
+                        <span>Usuários</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a href="#" class="sidebar-link collapsed has-dropdown" data-bs-toggle="collapse"
+                       data-bs-target="#auth" aria-expanded="false" aria-controls="auth">
+                        <i class="fa-solid fa-sliders"></i>
+                        <span>Configurações</span>
+                    </a>
+                    <ul id="auth" class="sidebar-dropdown list-unstyled collapse" data-bs-parent="#sidebar">
+                        <li class="sidebar-item">
+                            <a class="sidebar-link" asp-controller="Settings" asp-action="Ldap">Ldap</a>
+                        </li>
+                        <li class="sidebar-item">
+                            <a class="sidebar-link" asp-controller="Settings" asp-action="Email">E-mail</a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+            <div class="sidebar-footer">
+                <form id="logout" method="post" asp-controller="Account" asp-action="Logout">
+                    <a href="#" class="sidebar-link" onclick="document.getElementById('logout').submit();">
+                        <span>Sair</span>
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </a>
+                </form>
+            </div>
+        </aside>
+        <div class="main-wrapper d-flex flex-column flex-grow-1">
+            <div class="main p-3 flex-grow-1">
+                @RenderBody()
+            </div>
+            <footer class="border-top footer text-muted">
+                <div class="container text-center">
+                    &copy; 2025 - LdapTools - IFSertãoPE Campus Floresta
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/lib/select2/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @await Component.InvokeAsync("Notyf")
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

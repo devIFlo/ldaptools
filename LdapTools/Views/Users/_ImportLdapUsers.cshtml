@@ -1,0 +1,21 @@
+﻿@model ImportLdapUsersViewModel
+
+<div class="modal-header">
+    <h5 class="modal-title">Importar usuários</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+    <div class="row">
+        <form id="formImport" enctype="multipart/form-data" asp-action="ImportLdapUsers">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label class="control-label">Selecione os usuários que deseja importar da sua base LDAP:</label>
+                <select asp-for="SelectedUsernames" asp-items="@(new SelectList(Model.LdapUsers, "Username", "DisplayUser"))" class="form-select" id="multiple-select-field" multiple></select>
+            </div>
+        </form>
+    </div>
+</div>
+<div class="form-group modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+    <input type="submit" form="formImport" value="Importar" class="btn btn-success" />
+</div>

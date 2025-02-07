@@ -1,0 +1,94 @@
+﻿@model IEnumerable<ApplicationUser>
+
+@{
+    ViewData["Title"] = "Usuários do Sistema";
+}
+
+<header class="header header-sticky p-0 mb-4">
+    <div class="container-fluid px-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb my-0">
+                <li class="breadcrumb-item">
+                    <a data-coreui-i18n="home" asp-controller="Home" asp-action="Index">Home</a>
+                </li>
+                <li class="breadcrumb-item active">
+                    <span data-coreui-i18n="dashboard">Usuários</span>
+                </li>
+            </ol>
+        </nav>
+    </div>
+</header>
+
+<div>
+    <div class="container-lg px-4">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>@ViewData["Title"]</strong>
+                <a href="javascript:" class="btn btn-success btn-users-import">
+                    <i class="fa-solid fa-download"></i>
+                    <span class="d-none d-sm-inline">Importar</span>
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th>
+                                    @Html.DisplayNameFor(model => model.UserName)
+                                </th>
+                                <th>
+                                    @Html.DisplayNameFor(model => model.FirstName)
+                                </th>
+                                <th>
+                                    @Html.DisplayNameFor(model => model.Email)
+                                </th>
+                                <th class="text-center">
+                                    Ações
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class ="table-group-divider">
+                            @foreach (var user in Model)
+                            {
+                                <tr>
+                                    <td>@user.UserName</td>
+                                    <td>@user.FirstName @user.LastName</td>
+                                    <td>@user.Email</td>
+                                    <td class="text-center">
+                                        <a asp-controller="Users" asp-action="Edit" asp-route-id="@user.Id" class="btn btn-primary">
+                                            <i class="fa-solid fa-user-pen"></i>
+                                            <span class="d-none d-sm-inline">Editar</span>
+                                        </a>
+                                        <a href="javascript:" user-id="@user.Id" class="btn btn btn-danger btn-users-delete">
+                                            <i class="fa-regular fa-trash-can"></i>
+                                            <span class="d-none d-sm-inline">Remover</span>
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Modal UsersDelete *@
+<div class="modal fade" id="modalUsersDelete" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div id="usersDelete"></div>
+        </div>
+    </div>
+</div>
+
+@* Modal Import *@
+<div class="modal fade" id="modalUsersImport" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div id="usersImport"></div>
+        </div>
+    </div>
+</div>

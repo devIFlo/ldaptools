@@ -1,0 +1,62 @@
+﻿@model ApplicationUser
+
+@{
+    ViewData["Title"] = "Perfil do Usuário";
+}
+
+<header class="header header-sticky p-0 mb-4">
+    <div class="container-fluid px-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb my-0">
+                <li class="breadcrumb-item">
+                    <a data-coreui-i18n="home" asp-controller="Home" asp-action="Index">Home</a>
+                </li>
+                <li class="breadcrumb-item active">
+                    <span data-coreui-i18n="dashboard">Perfil</span>
+                </li>
+            </ol>
+        </nav>
+    </div>
+</header>
+
+<div>
+    <div class="container-lg px-4">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>@ViewData["Title"]</strong>
+                @if (Model.UserType == "LOCAL")
+                {
+                    <a href="javascript:" user-id="@Model.Id" class="btn btn-warning btn-change-password">
+                        <i class="fa-solid fa-user-lock"></i>
+                        <span class="d-none d-sm-inline">Alterar Senha</span>
+                    </a>
+                }
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">
+                        <strong>@Html.DisplayNameFor(model => model.UserName):</strong> @Model.UserName
+                    </li>
+                    <li class="list-group-item">
+                        <strong>@Html.DisplayNameFor(model => model.FullName):</strong> @Model.FullName
+                    </li>
+                    <li class="list-group-item">
+                        <strong>@Html.DisplayNameFor(model => model.Email):</strong> @Model.Email
+                    </li>
+                    <li class="list-group-item">
+                        <strong>@Html.DisplayNameFor(model => model.UserType):</strong> @Model.UserType
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Modal ChangePassword *@
+<div class="modal fade" id="modalChangePassword" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div id="changePassword"></div>
+        </div>
+    </div>
+</div>
