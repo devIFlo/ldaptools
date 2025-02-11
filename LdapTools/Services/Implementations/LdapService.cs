@@ -27,12 +27,12 @@ namespace LdapTools.Services.Implementations
             _userManager = userManager;
         }
 
-        private bool ValidateCertificate(byte[] rawCertData, string expectedServerName)
+        public static bool ValidateCertificate(byte[] rawCertData, string expectedServerName)
         {
             try
             {
-                // Converte o certificado em X509Certificate2
-                var cert = new X509Certificate2(rawCertData);
+                // Carrega o certificado
+                using X509Certificate2 cert = X509CertificateLoader.LoadCertificate(rawCertData);
 
                 // Valida se o certificado está no prazo de validade
                 if (DateTime.Now < cert.NotBefore || DateTime.Now > cert.NotAfter)
@@ -63,7 +63,7 @@ namespace LdapTools.Services.Implementations
                     }
                 }
 
-                return true; // Certificado válido
+                return true;
             }
             catch (Exception ex)
             {
