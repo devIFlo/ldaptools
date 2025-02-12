@@ -32,38 +32,35 @@ namespace LdapTools.Services.Implementations
         {
             try
             {
-                // Carrega o certificado
                 using X509Certificate2 cert = X509CertificateLoader.LoadCertificate(rawCertData);
 
-                // Valida se o certificado está no prazo de validade
-                if (DateTime.Now < cert.NotBefore || DateTime.Now > cert.NotAfter)
+                // Verifica a validade do certificado
+                if (DateTime.UtcNow < cert.NotBefore || DateTime.UtcNow > cert.NotAfter)
                 {
                     Console.WriteLine("Certificado expirado ou ainda não válido.");
                     return false;
                 }
 
-                // Valida o nome do servidor
+                // Permite variações no nome do CN
                 if (!cert.Subject.Contains($"CN={expectedServerName}", StringComparison.OrdinalIgnoreCase))
                 {
-                    Console.WriteLine("O nome do servidor no certificado não corresponde.");
+                    Console.WriteLine($"Nome do certificado inválido: {cert.Subject}");
                     return false;
                 }
 
-                // Verifica a cadeia de confiança
-                using (var chain = new X509Chain())
-                {
-                    chain.ChainPolicy.RevocationMode = X509RevocationMode.Online;
-                    chain.ChainPolicy.RevocationFlag = X509RevocationFlag.ExcludeRoot;
-                    chain.ChainPolicy.VerificationFlags = X509VerificationFlags.NoFlag;
-                    chain.ChainPolicy.VerificationTime = DateTime.Now;
+                // Valida a cadeia de certificados (confirma se a CA é confiável)
+                using var chain = new X509Chain();
+                chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck; // Evita erro se OCSP não estiver configurado
+                chain.ChainPolicy.VerificationFlags = X509VerificationFlags.NoFlag;
 
-                    if (!chain.Build(cert))
-                    {
-                        Console.WriteLine("O certificado não é confiável.");
-                        return false;
-                    }
+                bool isValid = chain.Build(cert);
+                if (!isValid)
+                {
+                    Console.WriteLine($"Falha na validação da cadeia: {chain.ChainStatus[0].StatusInformation}");
+                    return false;
                 }
 
+                Console.WriteLine("Certificado válido!");
                 return true;
             }
             catch (Exception ex)
@@ -72,6 +69,7 @@ namespace LdapTools.Services.Implementations
                 return false;
             }
         }
+
 
         private async Task<LdapConnection> CreateLdapConnection()
         {
@@ -88,10 +86,16 @@ namespace LdapTools.Services.Implementations
 
             var ldapConnection = new LdapConnection(new LdapDirectoryIdentifier(fqdnDomain, port));
             ldapConnection.Credential = new NetworkCredential(userDn, password, netBiosDomain);
-            ldapConnection.AuthType = AuthType.Basic;
+            ldapConnection.AuthType = AuthType.Negotiate;
 
             ldapConnection.SessionOptions.ProtocolVersion = 3;
-            ldapConnection.SessionOptions.SecureSocketLayer = false;           
+            ldapConnection.SessionOptions.SecureSocketLayer = port == 636;
+
+            ldapConnection.SessionOptions.VerifyServerCertificate += (conn, cert) =>
+            {
+                const string serverCertificateName = "floresta.ifsertao-pe.edu.br";
+                return ValidateCertificate(cert.GetRawCertData(), serverCertificateName);
+            };
 
             return ldapConnection;
         }
@@ -174,28 +178,26 @@ namespace LdapTools.Services.Implementations
 
             using var ldapConnection = await CreateLdapConnection();
 
-            ldapConnection.SessionOptions.VerifyServerCertificate += (sender, certificate) =>
-            {
-                const string serverCertificateName = "floresta.ifsertao-pe.edu.br";
-                return ValidateCertificate(certificate.GetRawCertData(), serverCertificateName);
-            };
-
-            ldapConnection.SessionOptions.StartTransportLayerSecurity(null);          
-
-            ldapConnection.Bind();
-
-            var modification = new DirectoryAttributeModification
-            {
-                Name = "unicodePwd",
-                Operation = DirectoryAttributeOperation.Replace
-            };
-
-            modification.Add(Encoding.Unicode.GetBytes($"\"{newPassword}\""));
-
-            var modifyRequest = new ModifyRequest(user.DistinguishedName, modification);
-
             try
             {
+                if (!ldapConnection.SessionOptions.SecureSocketLayer)
+                {
+                    Console.WriteLine("Iniciando StartTLS...");
+                    ldapConnection.SessionOptions.StartTransportLayerSecurity(null);
+                }
+
+                ldapConnection.Bind();
+
+                var modification = new DirectoryAttributeModification
+                {
+                    Name = "unicodePwd",
+                    Operation = DirectoryAttributeOperation.Replace
+                };
+
+                modification.Add(Encoding.Unicode.GetBytes($"\"{newPassword}\""));
+
+                var modifyRequest = new ModifyRequest(user.DistinguishedName, modification);
+
                 ldapConnection.SendRequest(modifyRequest);
                 return true;
             }
@@ -213,12 +215,12 @@ namespace LdapTools.Services.Implementations
             var ldapSettings = await _ldapSettingsRepository.GetLdapSettings();
             if (ldapSettings == null) throw new InvalidOperationException("Configurações LDAP não encontradas.");
 
-            using var ldapConnection = await CreateLdapConnection();          
+            using var ldapConnection = await CreateLdapConnection();
 
             try
             {
                 ldapConnection.Bind();
-                
+
             }
             catch (LdapException ex)
             {
@@ -248,7 +250,7 @@ namespace LdapTools.Services.Implementations
         public async Task<List<LdapUser>> GetLdapUsers(List<string> usernames)
         {
             var ldapUsers = new List<LdapUser>();
-            
+
             if (usernames == null || !usernames.Any())
             {
                 return ldapUsers;
