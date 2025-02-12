@@ -8,6 +8,7 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Serilog;
+using System.Runtime.InteropServices;
 
 namespace LdapTools.Services.Implementations
 {
@@ -90,13 +91,7 @@ namespace LdapTools.Services.Implementations
             ldapConnection.AuthType = AuthType.Basic;
 
             ldapConnection.SessionOptions.ProtocolVersion = 3;
-            ldapConnection.SessionOptions.SecureSocketLayer = false;
-
-            ldapConnection.SessionOptions.VerifyServerCertificate += (sender, certificate) =>
-            {
-                const string serverCertificateName = "floresta.ifsertao-pe.edu.br";
-                return ValidateCertificate(certificate.GetRawCertData(), serverCertificateName);
-            };
+            ldapConnection.SessionOptions.SecureSocketLayer = false;           
 
             return ldapConnection;
         }
@@ -179,7 +174,13 @@ namespace LdapTools.Services.Implementations
 
             using var ldapConnection = await CreateLdapConnection();
 
-            ldapConnection.SessionOptions.StartTransportLayerSecurity(null);
+            ldapConnection.SessionOptions.VerifyServerCertificate += (sender, certificate) =>
+            {
+                const string serverCertificateName = "floresta.ifsertao-pe.edu.br";
+                return ValidateCertificate(certificate.GetRawCertData(), serverCertificateName);
+            };
+
+            ldapConnection.SessionOptions.StartTransportLayerSecurity(null);          
 
             ldapConnection.Bind();
 
@@ -217,6 +218,7 @@ namespace LdapTools.Services.Implementations
             try
             {
                 ldapConnection.Bind();
+                
             }
             catch (LdapException ex)
             {
