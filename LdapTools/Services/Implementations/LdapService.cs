@@ -179,14 +179,14 @@ namespace LdapTools.Services.Implementations
             using var ldapConnection = await CreateLdapConnection();
 
             try
-            {
+            {             
+                ldapConnection.Bind();
+
                 if (!ldapConnection.SessionOptions.SecureSocketLayer)
                 {
                     Console.WriteLine("Iniciando StartTLS...");
                     ldapConnection.SessionOptions.StartTransportLayerSecurity(null);
                 }
-
-                ldapConnection.Bind();
 
                 var modification = new DirectoryAttributeModification
                 {
@@ -221,6 +221,11 @@ namespace LdapTools.Services.Implementations
             {
                 ldapConnection.Bind();
 
+                if (!ldapConnection.SessionOptions.SecureSocketLayer)
+                {
+                    Console.WriteLine("Iniciando StartTLS...");
+                    ldapConnection.SessionOptions.StartTransportLayerSecurity(null);
+                }
             }
             catch (LdapException ex)
             {
