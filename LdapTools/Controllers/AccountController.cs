@@ -249,6 +249,8 @@ namespace LdapTools.Controllers
             var username = forgotPasswordViewModel.Username;
             var fortigateToken = forgotPasswordViewModel.FortigateToken;
 
+            if (username == null || fortigateToken == null) return RedirectToAction("ExpirationToken");
+
             var email = await _ldapService.GetEmailByUsernameAsync(username);
             if (email == null) return View("Index");
 

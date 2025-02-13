@@ -13,11 +13,15 @@ namespace LdapTools.Services.Implementations
     {
         private readonly IEmailSettingsRepository _emailSettingsRepository;
         private readonly IDataProtector _protector;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public EmailSender(IEmailSettingsRepository emailSettingsRepository, IDataProtectionProvider dataProtectionProvider)
+        public EmailSender(IEmailSettingsRepository emailSettingsRepository,
+            IDataProtectionProvider dataProtectionProvider,
+            IHttpContextAccessor httpContextAccessor)
         {
             _emailSettingsRepository = emailSettingsRepository;
             _protector = dataProtectionProvider.CreateProtector("EmailSettingsPasswordProtector");
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task SendPasswordResetEmailAsync(string email, string token)
@@ -26,13 +30,32 @@ namespace LdapTools.Services.Implementations
 
             if (emailSettings == null) throw new InvalidOperationException("Configurações de Email não encontradas.");
 
-            var callbackUrl = $"https://localhost:7248/Account/ResetPassword?token={token}";
+            var request = _httpContextAccessor.HttpContext?.Request;
+            if (request == null)
+            {
+                throw new InvalidOperationException("A requisição HTTP não está disponível.");
+            }
+
+            var baseUrl = $"{request.Scheme}://{request.Host}{request.PathBase}";
+            var callbackUrl = $"{baseUrl}/Account/ResetPassword?token={token}";
 
             var message = new MailMessage
             {
                 From = new MailAddress(emailSettings.SenderEmail, emailSettings.SenderName),
                 Subject = "Recuperação de Senha",
-                Body = $"Clique <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>aqui</a> para redefinir sua senha.",
+                Body = $@"
+                    <p>Olá,</p>
+
+                    <p>Você solicitou a redefinição de sua senha. Para prosseguir, clique no link abaixo:</p>
+
+                    <p><a href='{HtmlEncoder.Default.Encode(callbackUrl)}' style='color: #007bff; text-decoration: none; font-weight: bold;'>Redefinir minha senha</a></p>
+
+                    <p>Se você não solicitou essa alteração, ignore este e-mail. Sua senha permanecerá a mesma.</p>
+
+                    <p>Atenciosamente,</p>
+                    <p><strong>Coordenação de Tecnologia da Informação</strong><br />
+                    Campus Floresta</strong></p>
+                    ",
                 IsBodyHtml = true
             };
 
