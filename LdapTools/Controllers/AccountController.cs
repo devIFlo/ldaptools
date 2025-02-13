@@ -231,12 +231,22 @@ namespace LdapTools.Controllers
             return RedirectToAction("Profile");
         }
 
-        [HttpGet("/Account/ForgotPassword/{fortigateTokem}")]
-		public ActionResult ForgotPassword(string fortigateTokem)
+        public ActionResult ForgotPassword()
         {
             var forgotPasswordViewModel = new ForgotPasswordViewModel
             {
-                FortigateToken = fortigateTokem
+                FortigateToken = "tempToken"
+            };
+
+            return View(forgotPasswordViewModel);
+        }
+
+        [HttpGet("/Account/ForgotPassword/{fortigateToken}")]
+		public ActionResult ForgotPassword(string fortigateToken)
+        {
+            var forgotPasswordViewModel = new ForgotPasswordViewModel
+            {
+                FortigateToken = fortigateToken
             };
 
             return View(forgotPasswordViewModel);
@@ -305,16 +315,28 @@ namespace LdapTools.Controllers
 
             var hashedToken = _tokenService.HashToken(model.Token);
             var storedToken = await _passwordResetTokenRepository.GetPasswordResetTokenAsync(hashedToken);
-            TempData["FortigateToken"] = storedToken.FortigateToken;
+            var fortigateToken = storedToken.FortigateToken;
 
             await _passwordResetTokenRepository.RemovePasswordResetTokenAsync(storedToken.Id);
             
+            if (fortigateToken == "tempToken")
+            {
+                return RedirectToAction("ResetPasswordConfirmation");
+            }
+
+            TempData["FortigateToken"] = fortigateToken;
             _notyfService.Success("Redirecionando para tela de login...", 3);
-            return RedirectToAction("ResetPasswordConfirmation");
+            return RedirectToAction("ResetPasswordConfirmationToken");
         }
 
         [HttpGet]
         public ActionResult ResetPasswordConfirmation()
+        {
+            return View();
+        }
+
+        [HttpGet]
+        public ActionResult ResetPasswordConfirmationToken()
         {
             ViewData["FortigateToken"] = TempData["FortigateToken"];
             return View();

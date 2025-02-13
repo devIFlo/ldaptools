@@ -46,7 +46,7 @@ namespace LdapTools.Services.Implementations
                 Body = $@"
                     <p>Olá,</p>
 
-                    <p>Você solicitou a redefinição de sua senha. Para prosseguir, clique no link abaixo:</p>
+                    <p>Você solicitou a redefinição de sua senha de rede. Para prosseguir, clique no link abaixo:</p>
 
                     <p><a href='{HtmlEncoder.Default.Encode(callbackUrl)}' style='color: #007bff; text-decoration: none; font-weight: bold;'>Redefinir minha senha</a></p>
 
@@ -54,7 +54,7 @@ namespace LdapTools.Services.Implementations
 
                     <p>Atenciosamente,</p>
                     <p><strong>Coordenação de Tecnologia da Informação</strong><br />
-                    Campus Floresta</strong></p>
+                    IFSertaoPE - Campus Floresta</strong></p>
                     ",
                 IsBodyHtml = true
             };

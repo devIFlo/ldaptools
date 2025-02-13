@@ -41,8 +41,14 @@ namespace LdapTools.Services.Implementations
         {
             try
             {
-                using var ldapConnection = await CreateLdapConnectionAsync();
-                ldapConnection.Bind(username, password);
+                var ldapSettings = await _ldapSettingsRepository.GetLdapSettings();
+                if (ldapSettings == null) throw new InvalidOperationException("Configurações LDAP não encontradas.");
+
+                var ldapConnection = new LdapConnection();
+                ldapConnection.Connect(ldapSettings.FqdnDomain, ldapSettings.Port);
+                ldapConnection.SecureSocketLayer = ldapSettings.Port == 636;
+
+                ldapConnection.Bind($"{username}@{ldapSettings.FqdnDomain}", password);
                 return ldapConnection.Bound;
             }
             catch (LdapException)

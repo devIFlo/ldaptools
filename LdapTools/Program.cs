@@ -15,6 +15,9 @@ using System.Runtime.InteropServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
+System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+Console.OutputEncoding = System.Text.Encoding.UTF8;
+
 var connectionString = Environment.GetEnvironmentVariable("CSLdapTools");
 
 // Add Serilog
