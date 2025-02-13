@@ -277,16 +277,11 @@ namespace LdapTools.Controllers
                 return RedirectToAction("ExpirationToken");
             }
 
-            var user = await _userManager.FindByNameAsync(storedToken.Username);
-            if (user == null)
-            {
-                _notyfService.Error("usuário não encontrado.");
-                return RedirectToAction("ForgotPassword");
-            }
+            var ldapUser = await _ldapService.GetUserByEmailAsync(storedToken.Email);
 
             var model = new ResetPasswordViewModel
             {
-                Name = user.FullName,
+                Name = ldapUser.FullName,
                 Email = storedToken.Email,
                 Token = token
             };

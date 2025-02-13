@@ -3,12 +3,9 @@ using LdapTools.Repositories.Interfaces;
 using LdapTools.Services.Interfaces;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
-using System.DirectoryServices.Protocols;
-using System.Net;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using Novell.Directory.Ldap;
 using Serilog;
-using System.Runtime.InteropServices;
 
 namespace LdapTools.Services.Implementations
 {
@@ -28,97 +25,25 @@ namespace LdapTools.Services.Implementations
             _userManager = userManager;
         }
 
-        public static bool ValidateCertificate(byte[] rawCertData, string expectedServerName)
-        {
-            try
-            {
-                using X509Certificate2 cert = X509CertificateLoader.LoadCertificate(rawCertData);
-
-                // Verifica a validade do certificado
-                if (DateTime.UtcNow < cert.NotBefore || DateTime.UtcNow > cert.NotAfter)
-                {
-                    Console.WriteLine("Certificado expirado ou ainda não válido.");
-                    return false;
-                }
-
-                // Permite variações no nome do CN
-                if (!cert.Subject.Contains($"CN={expectedServerName}", StringComparison.OrdinalIgnoreCase))
-                {
-                    Console.WriteLine($"Nome do certificado inválido: {cert.Subject}");
-                    return false;
-                }
-
-                // Valida a cadeia de certificados (confirma se a CA é confiável)
-                using var chain = new X509Chain();
-                chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck; // Evita erro se OCSP não estiver configurado
-                chain.ChainPolicy.VerificationFlags = X509VerificationFlags.NoFlag;
-
-                bool isValid = chain.Build(cert);
-                if (!isValid)
-                {
-                    Console.WriteLine($"Falha na validação da cadeia: {chain.ChainStatus[0].StatusInformation}");
-                    return false;
-                }
-
-                Console.WriteLine("Certificado válido!");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Erro ao validar o certificado: {ex.Message}");
-                return false;
-            }
-        }
-
-
-        private async Task<LdapConnection> CreateLdapConnection()
+        private async Task<LdapConnection> CreateLdapConnectionAsync()
         {
             var ldapSettings = await _ldapSettingsRepository.GetLdapSettings();
-
             if (ldapSettings == null) throw new InvalidOperationException("Configurações LDAP não encontradas.");
 
-            var fqdnDomain = ldapSettings.FqdnDomain;
-            var port = ldapSettings.Port;
-            var netBiosDomain = ldapSettings.NetBiosDomain;
-            var baseDn = ldapSettings.BaseDn;
-            var userDn = ldapSettings.UserDn;
-            var password = ldapSettings.DecryptPassword(_protector);
-
-            var ldapConnection = new LdapConnection(new LdapDirectoryIdentifier(fqdnDomain, port));
-            ldapConnection.Credential = new NetworkCredential(userDn, password, netBiosDomain);
-            ldapConnection.AuthType = AuthType.Negotiate;
-
-            ldapConnection.SessionOptions.ProtocolVersion = 3;
-            ldapConnection.SessionOptions.SecureSocketLayer = port == 636;
-
-            ldapConnection.SessionOptions.VerifyServerCertificate += (conn, cert) =>
-            {
-                const string serverCertificateName = "floresta.ifsertao-pe.edu.br";
-                return ValidateCertificate(cert.GetRawCertData(), serverCertificateName);
-            };
+            var ldapConnection = new LdapConnection();
+            ldapConnection.Connect(ldapSettings.FqdnDomain, ldapSettings.Port);
+            ldapConnection.SecureSocketLayer = ldapSettings.Port == 636;         
 
             return ldapConnection;
         }
 
         public async Task<bool> IsAuthenticated(string username, string password)
         {
-            var ldapSettings = await _ldapSettingsRepository.GetLdapSettings();
-
-            if (ldapSettings == null) return false;
-
             try
             {
-                using (LdapConnection ldapConnection = new LdapConnection(new LdapDirectoryIdentifier(ldapSettings.FqdnDomain, ldapSettings.Port)))
-                {
-                    ldapConnection.AuthType = AuthType.Basic;
-                    ldapConnection.SessionOptions.ProtocolVersion = 3;
-                    ldapConnection.SessionOptions.ReferralChasing = ReferralChasingOptions.None;
-                    ldapConnection.Timeout = TimeSpan.FromMinutes(1);
-
-                    ldapConnection.Bind(new NetworkCredential(username, password, ldapSettings.NetBiosDomain));
-
-                    return true;
-                }
+                using var ldapConnection = await CreateLdapConnectionAsync();
+                ldapConnection.Bind(username, password);
+                return ldapConnection.Bound;
             }
             catch (LdapException)
             {
@@ -128,134 +53,88 @@ namespace LdapTools.Services.Implementations
 
         public async Task<string?> GetEmailByUsernameAsync(string username)
         {
-            using var ldapConnection = await CreateLdapConnection();
-            ldapConnection.Bind();
+            var ldapSettings = await _ldapSettingsRepository.GetLdapSettings();
+            if (ldapSettings == null) throw new InvalidOperationException("Configurações LDAP não encontradas.");
+            var password = ldapSettings.DecryptPassword(_protector);
 
-            var searchRequest = new SearchRequest(
-                "OU=USUARIOS,OU=IFSERTAOPE-CF,DC=ad,DC=floresta,DC=ifsertao-pe,DC=edu,DC=br",
-                $"(sAMAccountName={username})",
-                SearchScope.Subtree,
-                "mail"
-            );
+            using var ldapConnection = await CreateLdapConnectionAsync();
+            ldapConnection.Bind($"{ldapSettings.UserDn}@{ldapSettings.FqdnDomain}", password);
 
-            var response = (SearchResponse)ldapConnection.SendRequest(searchRequest);
-            if (response.Entries.Count == 0) return null;
+            var searchFilter = $"(sAMAccountName={username})";
+            var searchResults = ldapConnection.Search(ldapSettings.BaseDn, LdapConnection.ScopeSub, searchFilter, new[] { "mail" }, false);
 
-            var entry = response.Entries[0];
-            return entry.Attributes["mail"]?[0]?.ToString();
-        }
-
-        public async Task<LdapUser> GetUserByEmailAsync(string email)
-        {
-            using var ldapConnection = await CreateLdapConnection();
-            ldapConnection.Bind();
-
-            var searchRequest = new SearchRequest(
-                "OU=USUARIOS,OU=IFSERTAOPE-CF,DC=ad,DC=floresta,DC=ifsertao-pe,DC=edu,DC=br",
-                $"(&(objectClass=user)(mail={email}))",
-                SearchScope.Subtree,
-                "distinguishedName"
-            );
-
-            var searchResponse = (SearchResponse)ldapConnection.SendRequest(searchRequest);
-
-            if (searchResponse.Entries.Count > 0)
+            if (searchResults.HasMore())
             {
-                var entry = searchResponse.Entries[0];
-                return new LdapUser
-                {
-                    DistinguishedName = entry.DistinguishedName
-                };
+                var entry = searchResults.Next();
+                return entry.GetAttributeSet().ContainsKey("mail") ? entry.GetAttribute("mail")?.StringValue : string.Empty;
             }
 
             return null;
         }
 
-        public async Task<bool> ResetPasswordAsync(string email, string newPassword)
+        public async Task<LdapUser?> GetUserByEmailAsync(string email)
         {
-            var user = await GetUserByEmailAsync(email);
-            if (user == null) return false;
+            var ldapSettings = await _ldapSettingsRepository.GetLdapSettings();
+            if (ldapSettings == null) throw new InvalidOperationException("Configurações LDAP não encontradas.");
+            var password = ldapSettings.DecryptPassword(_protector);
 
-            using var ldapConnection = await CreateLdapConnection();
+            using var ldapConnection = await CreateLdapConnectionAsync();
+            ldapConnection.Bind($"{ldapSettings.UserDn}@{ldapSettings.FqdnDomain}", password);
 
-            try
-            {             
-                ldapConnection.Bind();
+            var searchFilter = $"(mail={email})";
+            var searchResults = ldapConnection.Search(ldapSettings.BaseDn, LdapConnection.ScopeSub, searchFilter, new[] { "sAMAccountName", "givenName", "sn", "distinguishedName" }, false);
 
-                if (!ldapConnection.SessionOptions.SecureSocketLayer)
-                {
-                    Console.WriteLine("Iniciando StartTLS...");
-                    ldapConnection.SessionOptions.StartTransportLayerSecurity(null);
-                }
-
-                var modification = new DirectoryAttributeModification
-                {
-                    Name = "unicodePwd",
-                    Operation = DirectoryAttributeOperation.Replace
-                };
-
-                modification.Add(Encoding.Unicode.GetBytes($"\"{newPassword}\""));
-
-                var modifyRequest = new ModifyRequest(user.DistinguishedName, modification);
-
-                ldapConnection.SendRequest(modifyRequest);
-                return true;
-            }
-            catch (DirectoryOperationException ex)
+            if (searchResults.HasMore())
             {
-                Console.WriteLine($"Erro ao alterar a senha: {ex.Message}");
-                return false;
+                var entry = searchResults.Next();
+                return new LdapUser
+                {
+                    Username = entry.GetAttribute("sAMAccountName")?.StringValue,
+                    FirstName = entry.GetAttributeSet().ContainsKey("givenName") ? entry.GetAttribute("givenName")?.StringValue : string.Empty,
+                    LastName = entry.GetAttributeSet().ContainsKey("sn") ? entry.GetAttribute("sn")?.StringValue : string.Empty,
+                    DistinguishedName = entry.GetAttribute("distinguishedName")?.StringValue,
+                };
             }
+            return null;
         }
 
         public async Task<List<LdapUser>> GetLdapUsers()
         {
-            var ldapUsers = new List<LdapUser>();
-
             var ldapSettings = await _ldapSettingsRepository.GetLdapSettings();
             if (ldapSettings == null) throw new InvalidOperationException("Configurações LDAP não encontradas.");
+            var password = ldapSettings.DecryptPassword(_protector);
 
-            using var ldapConnection = await CreateLdapConnection();
+            using var ldapConnection = await CreateLdapConnectionAsync();
+            ldapConnection.Bind($"{ldapSettings.UserDn}@{ldapSettings.FqdnDomain}", password);
 
-            try
+            var searchResults = ldapConnection.Search(ldapSettings.BaseDn, LdapConnection.ScopeSub, "(objectClass=user)", new[] { "sAMAccountName", "mail", "givenName", "sn" }, false);
+
+            var users = new List<LdapUser>();
+            while (searchResults.HasMore())
             {
-                ldapConnection.Bind();
+                var entry = searchResults.Next();
 
-                if (!ldapConnection.SessionOptions.SecureSocketLayer)
+                var attributeSet = entry.GetAttributeSet();
+                foreach (LdapAttribute attr in attributeSet)
                 {
-                    Console.WriteLine("Iniciando StartTLS...");
-                    ldapConnection.SessionOptions.StartTransportLayerSecurity(null);
+                    Console.WriteLine($"{attr.Name}: {attr.StringValue}");
                 }
-            }
-            catch (LdapException ex)
-            {
-                throw new LdapException("Falha ao conectar ao servidor LDAP. Verifique as configurações da conexão.", ex);
-            }
 
-            var filter = "(objectClass=person)";
-            var searchRequest = new SearchRequest(ldapSettings.BaseDn, filter, SearchScope.Subtree, null);
-            var response = (SearchResponse)ldapConnection.SendRequest(searchRequest);
-
-            foreach (SearchResultEntry entry in response.Entries)
-            {
-                var ldapUser = new LdapUser
+                users.Add(new LdapUser
                 {
-                    Username = entry.Attributes["sAMAccountName"]?[0]?.ToString(),
-                    Email = entry.Attributes["mail"]?[0]?.ToString(),
-                    FirstName = entry.Attributes["givenName"]?[0]?.ToString(),
-                    LastName = entry.Attributes["sn"]?[0]?.ToString()
-                };
-
-                ldapUsers.Add(ldapUser);
+                    Username = entry.GetAttribute("sAMAccountName")?.StringValue,
+                    Email = entry.GetAttributeSet().ContainsKey("mail") ? entry.GetAttribute("mail")?.StringValue : string.Empty,
+                    FirstName = entry.GetAttributeSet().ContainsKey("givenName") ? entry.GetAttribute("givenName")?.StringValue : string.Empty,
+                    LastName = entry.GetAttributeSet().ContainsKey("sn") ? entry.GetAttribute("sn")?.StringValue : string.Empty
+                });
             }
 
-            return ldapUsers;
+            return users;
         }
 
         public async Task<List<LdapUser>> GetLdapUsers(List<string> usernames)
         {
             var ldapUsers = new List<LdapUser>();
-
             if (usernames == null || !usernames.Any())
             {
                 return ldapUsers;
@@ -263,38 +142,68 @@ namespace LdapTools.Services.Implementations
 
             var ldapSettings = await _ldapSettingsRepository.GetLdapSettings();
             if (ldapSettings == null) throw new InvalidOperationException("Configurações LDAP não encontradas.");
+            var password = ldapSettings.DecryptPassword(_protector);
 
-            using var ldapConnection = await CreateLdapConnection();
+            using var ldapConnection = await CreateLdapConnectionAsync();
+            ldapConnection.Bind($"{ldapSettings.UserDn}@{ldapSettings.FqdnDomain}", password);
 
-            try
+            var usernameFilters = string.Join("", usernames.Select(username => $"(sAMAccountName={username})"));
+            var searchFilter = $"(&(objectClass=person)(|{usernameFilters}))";
+
+            var searchResults = ldapConnection.Search(
+                ldapSettings.BaseDn, 
+                LdapConnection.ScopeSub,
+                searchFilter, 
+                new[] { "sAMAccountName", "mail", "givenName", "sn" }, 
+                false
+            );
+
+            while (searchResults.HasMore())
             {
-                ldapConnection.Bind();
-            }
-            catch (LdapException ex)
-            {
-                throw new LdapException("Falha ao conectar ao servidor LDAP. Verifique as configurações da conexão.", ex);
-            }
+                var entry = searchResults.Next();
 
-            var usernamesFilter = string.Join("", usernames.Select(username => $"(sAMAccountName={username})"));
-            var filter = $"(&(objectClass=person)(|{usernamesFilter}))";
-
-            var searchRequest = new SearchRequest(ldapSettings.BaseDn, filter, SearchScope.Subtree, null);
-            var response = (SearchResponse)ldapConnection.SendRequest(searchRequest);
-
-            foreach (SearchResultEntry entry in response.Entries)
-            {
-                var ldapUser = new LdapUser
+                ldapUsers.Add(new LdapUser
                 {
-                    Username = entry.Attributes["sAMAccountName"]?[0]?.ToString(),
-                    Email = entry.Attributes["mail"]?[0]?.ToString(),
-                    FirstName = entry.Attributes["givenName"]?[0]?.ToString(),
-                    LastName = entry.Attributes["sn"]?[0]?.ToString()
-                };
-
-                ldapUsers.Add(ldapUser);
+                    Username = entry.GetAttribute("sAMAccountName")?.StringValue,
+                    Email = entry.GetAttributeSet().ContainsKey("mail") ? entry.GetAttribute("mail")?.StringValue : string.Empty,
+                    FirstName = entry.GetAttributeSet().ContainsKey("givenName") ? entry.GetAttribute("givenName")?.StringValue : string.Empty,
+                    LastName = entry.GetAttributeSet().ContainsKey("sn") ? entry.GetAttribute("sn")?.StringValue : string.Empty
+                });
             }
 
             return ldapUsers;
+        }
+               
+        public async Task<bool> ResetPasswordAsync(string email, string newPassword)
+        {
+            var ldapSettings = await _ldapSettingsRepository.GetLdapSettings();
+            if (ldapSettings == null) throw new InvalidOperationException("Configurações LDAP não encontradas.");
+            var password = ldapSettings.DecryptPassword(_protector);
+
+            var user = await GetUserByEmailAsync(email);
+            if (user == null) return false;
+
+            using var ldapConnection = await CreateLdapConnectionAsync();
+            ldapConnection.StartTls();
+            ldapConnection.Bind($"{ldapSettings.UserDn}@{ldapSettings.FqdnDomain}", password);
+
+            try
+            {
+                var passwordBytes = Encoding.Unicode.GetBytes($"\"{newPassword}\"");
+                var modification = new LdapModification(
+                    LdapModification.Replace, 
+                    new LdapAttribute("unicodePwd", passwordBytes)
+                );
+
+                ldapConnection.Modify(user.DistinguishedName, new LdapModification[] { modification });
+
+                return true;
+            }
+            catch (LdapException ex)
+            {
+                Console.WriteLine($"Erro ao alterar a senha: {ex.Message}");
+                return false;
+            }
         }
 
         public async Task ImportLdapUsers(List<LdapUser> ldapUsers)
