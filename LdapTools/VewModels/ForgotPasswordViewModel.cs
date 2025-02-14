@@ -4,7 +4,7 @@ namespace LdapTools.VewModels
 {
 	public class ForgotPasswordViewModel
     {
-		public string? FortigateToken { get; set; }
+		public string? FortigateLogin { get; set; }
         public string? Username { get; set; }
     }
 }

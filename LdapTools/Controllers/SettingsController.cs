@@ -1,11 +1,12 @@
 ﻿using AspNetCoreHero.ToastNotification.Abstractions;
 using LdapTools.Models;
 using LdapTools.Repositories.Interfaces;
-using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LdapTools.Controllers
 {
+    [Authorize(Roles = "Admin")]
     public class SettingsController : Controller
     {
         private readonly ILdapSettingsRepository _ldapSettingsRepository;

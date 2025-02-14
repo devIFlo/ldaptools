@@ -2,6 +2,7 @@
 using LdapTools.Models;
 using LdapTools.Services.Interfaces;
 using LdapTools.VewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +10,7 @@ using Serilog;
 
 namespace LdapTools.Controllers
 {
+    [Authorize(Roles = "Admin")]
     public class UsersController : Controller
     {
         private readonly UserManager<ApplicationUser> _userManager;

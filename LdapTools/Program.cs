@@ -68,6 +68,7 @@ builder.Services.AddNotyf(config =>
     config.DurationInSeconds = 10;
     config.IsDismissable = true;
     config.Position = NotyfPosition.TopRight;
+    config.HasRippleEffect = true;
 });
 
 var app = builder.Build();

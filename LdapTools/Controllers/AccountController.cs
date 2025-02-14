@@ -159,6 +159,7 @@ namespace LdapTools.Controllers
             return View(user);
         }
 
+        [Authorize]
         [HttpGet]
         public async Task<IActionResult> ChangePassword(string id)
         {
@@ -176,6 +177,7 @@ namespace LdapTools.Controllers
             return PartialView("_ChangePassword", changePasswordView);
         }
 
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
         {
@@ -235,18 +237,18 @@ namespace LdapTools.Controllers
         {
             var forgotPasswordViewModel = new ForgotPasswordViewModel
             {
-                FortigateToken = "tempToken"
+                FortigateLogin = "false"
             };
 
             return View(forgotPasswordViewModel);
         }
 
-        [HttpGet("/Account/ForgotPassword/{fortigateToken}")]
-		public ActionResult ForgotPassword(string fortigateToken)
+        [HttpGet("/Account/ForgotPassword/{fortigateLogin}")]
+		public ActionResult ForgotPassword(string fortigateLogin)
         {
             var forgotPasswordViewModel = new ForgotPasswordViewModel
             {
-                FortigateToken = fortigateToken
+                FortigateLogin = fortigateLogin
             };
 
             return View(forgotPasswordViewModel);
@@ -257,9 +259,9 @@ namespace LdapTools.Controllers
         public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel forgotPasswordViewModel)
         {
             var username = forgotPasswordViewModel.Username;
-            var fortigateToken = forgotPasswordViewModel.FortigateToken;
+            var fortigateLogin = forgotPasswordViewModel.FortigateLogin;
 
-            if (username == null || fortigateToken == null) return RedirectToAction("ExpirationToken");
+            if (username == null || fortigateLogin == null) return RedirectToAction("ExpirationToken");
 
             var email = await _ldapService.GetEmailByUsernameAsync(username);
             if (email == null) return View("Index");
@@ -269,7 +271,7 @@ namespace LdapTools.Controllers
 
             var expirationTime = DateTime.UtcNow.AddHours(1);
 
-            await _passwordResetTokenRepository.SavePasswordResetTokenAsync(username, email, hashedToken, fortigateToken, expirationTime);
+            await _passwordResetTokenRepository.SavePasswordResetTokenAsync(username, email, hashedToken, fortigateLogin, expirationTime);
             
             await _emailSender.SendPasswordResetEmailAsync(email, token);
 
@@ -315,18 +317,17 @@ namespace LdapTools.Controllers
 
             var hashedToken = _tokenService.HashToken(model.Token);
             var storedToken = await _passwordResetTokenRepository.GetPasswordResetTokenAsync(hashedToken);
-            var fortigateToken = storedToken.FortigateToken;
+            var fortigateLogin = storedToken.FortigateLogin;
 
             await _passwordResetTokenRepository.RemovePasswordResetTokenAsync(storedToken.Id);
             
-            if (fortigateToken == "tempToken")
+            if (fortigateLogin == "false")
             {
                 return RedirectToAction("ResetPasswordConfirmation");
             }
 
-            TempData["FortigateToken"] = fortigateToken;
             _notyfService.Success("Redirecionando para tela de login...", 3);
-            return RedirectToAction("ResetPasswordConfirmationToken");
+            return RedirectToAction("ResetPasswordConfirmationFortigate");
         }
 
         [HttpGet]
@@ -336,9 +337,8 @@ namespace LdapTools.Controllers
         }
 
         [HttpGet]
-        public ActionResult ResetPasswordConfirmationToken()
+        public ActionResult ResetPasswordConfirmationFortigate()
         {
-            ViewData["FortigateToken"] = TempData["FortigateToken"];
             return View();
         }
 

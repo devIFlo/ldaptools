@@ -14,14 +14,14 @@ namespace LdapTools.Repositories.Implementations
             _context = context;
         }
 
-        public async Task SavePasswordResetTokenAsync(string username, string email, string hashedToken, string fortigateToken, DateTime expirationTime)
+        public async Task SavePasswordResetTokenAsync(string username, string email, string hashedToken, string fortigateLogin, DateTime expirationTime)
         {
             var token = new PasswordResetToken
             {
                 Username = username,
                 Email = email,
                 HashedToken = hashedToken,
-                FortigateToken = fortigateToken,
+                FortigateLogin = fortigateLogin,
                 ExpirationTime = expirationTime,
                 CreatedAt = DateTime.UtcNow
             };
