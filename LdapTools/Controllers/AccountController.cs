@@ -1,4 +1,4 @@
-using AspNetCoreHero.ToastNotification.Abstractions;
+Ôªøusing AspNetCoreHero.ToastNotification.Abstractions;
 using LdapTools.Models;
 using LdapTools.Repositories.Interfaces;
 using LdapTools.Services;
@@ -89,15 +89,15 @@ namespace LdapTools.Controllers
                                 Response.Cookies.Delete("RememberedUsername");
                             }
 
-                            Log.Information("O usu·rio {User} realizou o login no sistema em {Timestamp}",
+                            Log.Information("O usu√°rio {User} realizou o login no sistema em {Timestamp}",
                                 username, DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"));
 
                             return RedirectToAction("Index", "Home");
                         }
 
-                        ModelState.AddModelError(string.Empty, "Usu·rio ou senha incorreto.");
+                        ModelState.AddModelError(string.Empty, "Usu√°rio ou senha incorreto.");
 
-                        Log.Warning("Tentativa de login mal sucedida com o usu·rio {User} em {Timestamp}",
+                        Log.Warning("Tentativa de login mal sucedida com o usu√°rio {User} em {Timestamp}",
                                 username, DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"));
 
                         return View(model);
@@ -108,7 +108,7 @@ namespace LdapTools.Controllers
                         var user = await _userManager.FindByNameAsync(username);
                         if (user == null)
                         {
-                            ModelState.AddModelError(string.Empty, "Usu·rio n„o tem permiss„o para acessar o sistema.");
+                            ModelState.AddModelError(string.Empty, "Usu√°rio n√£o tem permiss√£o para acessar o sistema.");
                             return View(model);
                         }
 
@@ -128,16 +128,16 @@ namespace LdapTools.Controllers
                             Response.Cookies.Delete("RememberedUsername");
                         }
 
-                        Log.Information("O usu·rio {User} realizou o login no sistema em {Timestamp}",
+                        Log.Information("O usu√°rio {User} realizou o login no sistema em {Timestamp}",
                                 username, DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"));
 
                         return RedirectToAction("Index", "Home");
                     }
                 }
 
-                ModelState.AddModelError(string.Empty, "Usu·rio ou senha incorreto.");
+                ModelState.AddModelError(string.Empty, "Usu√°rio ou senha incorreto.");
 
-                Log.Warning("Tentativa de login mal sucedida com o usu·rio {User} em {Timestamp}",
+                Log.Warning("Tentativa de login mal sucedida com o usu√°rio {User} em {Timestamp}",
                                 username, DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"));
             }
 
@@ -166,7 +166,7 @@ namespace LdapTools.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user != null && (user.UserType != "LOCAL" || user.Id != id))
             {
-                return Json(new { message = "Usu·rio incorreto!" });
+                return Json(new { message = "Usu√°rio incorreto!" });
             }
 
             var changePasswordView = new ChangePasswordViewModel
@@ -194,7 +194,7 @@ namespace LdapTools.Controllers
 
                 if (currentPassword == null || newPassword == null)
                 {
-                    _notyfService.Error("Preencha todos os campos obrigarÛrios.");
+                    _notyfService.Error("Preencha todos os campos obrigar√≥rios.");
                     return RedirectToAction("Profile");
                 }
 
@@ -217,18 +217,18 @@ namespace LdapTools.Controllers
                     }
                     else
                     {
-                        _notyfService.Error("A nova senha e a confirmaÁ„o da senha n„o coincidem.");
+                        _notyfService.Error("A nova senha e a confirma√ß√£o da senha n√£o coincidem.");
                     }
                 }
                 else
                 {
-                    _notyfService.Error("A senha atual est· incorreta.");
+                    _notyfService.Error("A senha atual est√° incorreta.");
                 }
 
                 return RedirectToAction("Profile");
             }
 
-            _notyfService.Error("Usu·rio n„o encontrado.");
+            _notyfService.Error("Usu√°rio n√£o encontrado.");
 
             return RedirectToAction("Profile");
         }
@@ -275,7 +275,7 @@ namespace LdapTools.Controllers
             
             await _emailSender.SendPasswordResetEmailAsync(email, token);
 
-            _notyfService.Success("Foi enviado um e-mail com o link para recuperaÁ„o da senha.");
+            _notyfService.Success("Foi enviado um e-mail com o link para recupera√ß√£o da senha.");
 
             return View();
         }
