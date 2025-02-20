@@ -59,6 +59,7 @@ builder.Services.AddScoped<ILdapService, LdapService>();
 builder.Services.AddScoped<ILdapSettingsRepository, LdapSettingsRepository>();
 builder.Services.AddScoped<IEmailSettingsRepository, EmailSettingsRepository>();
 builder.Services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
+builder.Services.AddScoped<ILogService, LogService>();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<ISeedUserRoleInitial, SeedUserRoleInitial>();
 

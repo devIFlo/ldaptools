@@ -1,18 +1,16 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace LdapTools.VewModels
+namespace LdapTools.ViewModels
 {
-    public class ChangePasswordViewModel
+    public class ResetPasswordViewModel
     {
-        public required string UserId { get; set; }
+        [Display(Name = "Nome")]
+        public string? Name { get; set; }
 
-        [Required(ErrorMessage = "A senha atual é obrigatória.")]
-        [DataType(DataType.Password)]
-        [Display(Name = "Senha Atual")]
-        public string? CurrentPassword { get; set; }
+        public required string Email { get; set; }
 
         [Required(ErrorMessage = "A nova senha é obrigatória.")]
-        [StringLength(50, ErrorMessage = "A {0} deve ter pelo menos {2} caracteres.", MinimumLength = 6)]
+        [StringLength(50, ErrorMessage = "A {0} deve ter pelo menos {2} caracteres.", MinimumLength = 7)]
         [DataType(DataType.Password)]
         [Display(Name = "Nova Senha")]
         public string? NewPassword { get; set; }
@@ -22,5 +20,8 @@ namespace LdapTools.VewModels
         [Display(Name = "Confirmar Nova Senha")]
         [Compare("NewPassword", ErrorMessage = "A nova senha e a confirmação não coincidem.")]
         public string? ConfirmPassword { get; set; }
+
+        [Required]
+        public required string Token { get; set; }
     }
 }

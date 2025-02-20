@@ -1,6 +1,6 @@
 ﻿using LdapTools.Models;
 
-namespace LdapTools.VewModels
+namespace LdapTools.ViewModels
 {
     public class ImportLdapUsersViewModel
     {

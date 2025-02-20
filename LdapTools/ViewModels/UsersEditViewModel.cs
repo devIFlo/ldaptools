@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using System.ComponentModel.DataAnnotations;
 
-namespace LdapTools.VewModels
+namespace LdapTools.ViewModels
 {
     public class UsersEditViewModel
     {

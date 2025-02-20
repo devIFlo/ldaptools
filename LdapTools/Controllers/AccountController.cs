@@ -3,7 +3,7 @@ using LdapTools.Models;
 using LdapTools.Repositories.Interfaces;
 using LdapTools.Services;
 using LdapTools.Services.Interfaces;
-using LdapTools.VewModels;
+using LdapTools.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -275,6 +275,9 @@ namespace LdapTools.Controllers
             
             await _emailSender.SendPasswordResetEmailAsync(email, token);
 
+            Log.Information("O usuário {User} solicitou o envio do e-mail de recuperação de senha em {Timestamp}",
+                                username, DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"));
+
             _notyfService.Success("Foi enviado um e-mail com o link para recuperação da senha.");
 
             return View();
@@ -318,9 +321,13 @@ namespace LdapTools.Controllers
             var hashedToken = _tokenService.HashToken(model.Token);
             var storedToken = await _passwordResetTokenRepository.GetPasswordResetTokenAsync(hashedToken);
             var fortigateLogin = storedToken.FortigateLogin;
+            var username = storedToken.Username;
+
+            Log.Information("O usuário {User} alterou sua senha em {Timestamp}",
+                                username, DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"));
 
             await _passwordResetTokenRepository.RemovePasswordResetTokenAsync(storedToken.Id);
-            
+
             if (fortigateLogin == "false")
             {
                 return RedirectToAction("ResetPasswordConfirmation");
