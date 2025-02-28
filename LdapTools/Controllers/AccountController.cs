@@ -278,7 +278,7 @@ namespace LdapTools.Controllers
             Log.Information("O usuário {User} solicitou o envio do e-mail de recuperação de senha em {Timestamp}",
                                 username, DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"));
 
-            _notyfService.Success("Foi enviado um e-mail com o link para recuperação da senha.");
+            _notyfService.Success($"Foi enviado um e-mail com o link de recuperação da senha para: {email}.");
 
             return View();
         }
