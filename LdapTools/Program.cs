@@ -57,6 +57,7 @@ builder.Services.AddTransient<IEmailSender, EmailSender>();
 
 builder.Services.AddScoped<ILdapService, LdapService>();
 builder.Services.AddScoped<ILdapSettingsRepository, LdapSettingsRepository>();
+builder.Services.AddScoped<ILdapExplorerService, LdapExplorerService>();
 builder.Services.AddScoped<IEmailSettingsRepository, EmailSettingsRepository>();
 builder.Services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
 builder.Services.AddScoped<ILogService, LogService>();

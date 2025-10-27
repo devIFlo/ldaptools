@@ -1,4 +1,9 @@
-﻿<!DOCTYPE html>
+﻿@{
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+}
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -25,35 +30,53 @@
             </div>
             <ul class="sidebar-nav">
                 <li class="sidebar-item">
-                    <a class="sidebar-link" asp-controller="Account" asp-action="Profile">
+                    <a class="sidebar-link @(currentController == "Account" && currentAction == "Profile" ? "active" : "")" asp-controller="Account" asp-action="Profile">
                         <i class="fa-regular fa-user"></i>
                         <span>Perfil</span>
                     </a>
                 </li>
                 <li class="sidebar-item">
-                    <a class="sidebar-link" asp-controller="Users" asp-action="Index">
+                    <a class="sidebar-link @(currentController == "Users" && currentAction == "Index" ? "active" : "")" asp-controller="Users" asp-action="Index">
                         <i class="fa-solid fa-users"></i>
                         <span>Usuários</span>
                     </a>
                 </li>
                 <li class="sidebar-item">
-                    <a class="sidebar-link" asp-controller="Logs" asp-action="Index">
+                    <a href="#" class="sidebar-link collapsed has-dropdown " data-bs-toggle="collapse"
+                       data-bs-target="#ad" aria-expanded="false" aria-controls="ad">
+                        <i class="fa-solid fa-folder-tree"></i>
+                        <span>Active Directory</span>
+                    </a>
+                    <ul id="ad" class="sidebar-dropdown list-unstyled collapse @(currentController == "ActiveDirectory" ? "show" : "")" data-bs-parent="#sidebar">
+                        <li class="sidebar-item">
+                            <a class="sidebar-link @(currentController == "ActiveDirectory" && currentAction == "Users" ? "active" : "")" asp-controller="ActiveDirectory" asp-action="Users">Usuários</a>
+                        </li>
+                        <li class="sidebar-item">
+                            <a class="sidebar-link @(currentController == "ActiveDirectory" && currentAction == "OrganizationalUnit" ? "active" : "")" asp-controller="ActiveDirectory" asp-action="OrganizationalUnit">Unidades Organizacionais</a>
+                        </li>
+                         <li class="sidebar-item">
+                            <a class="sidebar-link @(currentController == "ActiveDirectory" && currentAction == "Group" ? "active" : "")" asp-controller="ActiveDirectory" asp-action="Group">Grupos</a>
+                        </li> 
+                    </ul>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link @(currentController == "Logs" && currentAction == "Index" ? "active" : "")" asp-controller="Logs" asp-action="Index">
                         <i class="fas fa-tasks"></i>
                         <span>Logs</span>
                     </a>
                 </li>
                 <li class="sidebar-item">
                     <a href="#" class="sidebar-link collapsed has-dropdown" data-bs-toggle="collapse"
-                       data-bs-target="#auth" aria-expanded="false" aria-controls="auth">
+                       data-bs-target="#config" aria-expanded="false" aria-controls="config">
                         <i class="fa-solid fa-sliders"></i>
                         <span>Configurações</span>
                     </a>
-                    <ul id="auth" class="sidebar-dropdown list-unstyled collapse" data-bs-parent="#sidebar">
+                    <ul id="config" class="sidebar-dropdown list-unstyled collapse @(currentController == "Settings" ? "show" : "")" data-bs-parent="#sidebar">
                         <li class="sidebar-item">
-                            <a class="sidebar-link" asp-controller="Settings" asp-action="Ldap">Ldap</a>
+                            <a class="sidebar-link @(currentController == "Settings" && currentAction == "Ldap" ? "active" : "")" asp-controller="Settings" asp-action="Ldap">Ldap</a>
                         </li>
                         <li class="sidebar-item">
-                            <a class="sidebar-link" asp-controller="Settings" asp-action="Email">E-mail</a>
+                            <a class="sidebar-link @(currentController == "Settings" && currentAction == "Email" ? "active" : "")" asp-controller="Settings" asp-action="Email">E-mail</a>
                         </li>
                     </ul>
                 </li>
