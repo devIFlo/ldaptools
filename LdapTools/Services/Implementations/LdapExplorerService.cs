@@ -65,13 +65,9 @@ namespace LdapTools.Services.Implementations
 
             string searchBase = string.IsNullOrWhiteSpace(ou) ? ldapSettings.BaseDn : ou;
 
-            // Montar filtro de busca dinâmico
             string filtro = "(objectClass=user)";
-
             if (!string.IsNullOrWhiteSpace(args))
-            {
                 filtro = $"(&(objectClass=user)(|(cn=*{args}*)(sAMAccountName=*{args}*)))";
-            }
 
             var search = connection.Search(
                 searchBase,
@@ -103,6 +99,7 @@ namespace LdapTools.Services.Implementations
             return resultado.OrderBy(u => u.Name).ToList();
         }
 
+
         public async Task<List<OrganizationalUnitViewModel>> GetOuTreeAsync(string? parentDn = null)
         {
             var ldapSettings = await _ldapSettingsRepository.GetLdapSettings();
@@ -129,7 +126,7 @@ namespace LdapTools.Services.Implementations
                 try
                 {
                     var entry = search.Next();
-                    var ou = entry.GetAttribute("ou")?.StringValue ?? entry.GetAttribute("name")?.StringValue; // fallback para CN/container
+                    var ou = entry.GetAttribute("ou")?.StringValue ?? entry.GetAttribute("name")?.StringValue;
 
                     var dn = entry.Dn;
 

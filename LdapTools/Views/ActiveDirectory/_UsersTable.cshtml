@@ -1,0 +1,44 @@
+﻿@using X.PagedList
+@using X.PagedList.Mvc.Core
+@model IPagedList<LdapTools.ViewModels.LdapUserViewModel>
+
+<table class="table table-hover">
+    <thead>
+        <tr>
+            <th>Nome</th>
+            <th>Usuário</th>
+            <th>Email</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (!Model.Any())
+        {
+            <tr><td colspan="3" class="text-center text-muted">Nenhum usuário encontrado.</td></tr>
+        }
+        else
+        {
+            foreach (var u in Model)
+            {
+                <tr>
+                    <td>@u.Name</td>
+                    <td>@u.Username</td>
+                    <td>@u.Email</td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@if (Model.PageCount > 1)
+{
+    <div class="d-flex justify-content-center">
+        @Html.PagedListPager(Model, page => Url.Action("UsersTable", new { ou = ViewBag.OU, args = ViewBag.Args, page }),
+        new PagedListRenderOptions
+        {
+            LiElementClasses = new[] { "page-item" },
+            PageClasses = new[] { "page-link" },
+            Display = PagedListDisplayMode.IfNeeded,
+            UlElementClasses = new[] { "pagination", "justify-content-center" }
+        })
+</div>
+}

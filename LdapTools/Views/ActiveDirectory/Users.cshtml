@@ -1,6 +1,4 @@
-﻿@model LdapUserViewModel
-
-@{
+﻿@{
     ViewData["Title"] = "Usuários do Active Directory";
 }
 
@@ -8,55 +6,34 @@
     <div class="container-fluid px-4">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb my-0">
-                <li class="breadcrumb-item">
-                    <a data-coreui-i18n="home" asp-controller="Home" asp-action="Index">Home</a>
-                </li>
-                <li class="breadcrumb-item active">
-                    <span data-coreui-i18n="dashboard">Active Directory</span>
-                </li>
-                <li class="breadcrumb-item active">
-                    <span data-coreui-i18n="dashboard">Usuários</span>
-                </li>
+                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
+                <li class="breadcrumb-item active">Active Directory</li>
+                <li class="breadcrumb-item active">Usuários</li>
             </ol>
         </nav>
     </div>
 </header>
 
-<div>
-    <div class="container-lg px-4">
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <strong>@ViewData["Title"]</strong>  
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="input-group">
-                            <input type="text" id="args" class="form-control" placeholder="Nome ou matrícula..." />
-                            <button id="btnBuscar" class="btn btn-primary">Buscar</button>
-                        </div>
-
-                        <div id="ouTree" class="border rounded p-2 mt-2" style="height: 500px; overflow-y: auto;"></div>
+<div class="container-lg px-4">
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>@ViewData["Title"]</strong>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="input-group">
+                        <input type="text" id="args" class="form-control" placeholder="Nome ou matrícula..." />
+                        <button id="btnBuscar" class="btn btn-primary">Buscar</button>
                     </div>
-                    <div class="col-md-9 table-responsive">
-                        <table class="table table-hover" style="width:100%" id="userTable">
-                            <thead>
-                                <tr>
-                                    <th>
-                                        @Html.DisplayNameFor(model => model.Name)
-                                    </th>
-                                    <th>
-                                        @Html.DisplayNameFor(model => model.Username)
-                                    </th>
-                                    <th>
-                                        @Html.DisplayNameFor(model => model.Email)
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody class="table-group-divider">
-                            </tbody>
-                        </table>
-                    </div> 
+
+                    <div id="ouTree" class="border rounded p-2 mt-2" style="height: 500px; overflow-y: auto;"></div>
+                </div>
+
+                <div class="col-md-9">
+                    <div id="usersContainer">
+                        <div class="text-center text-muted mt-5">Selecione uma OU ou pesquise por nome/matrícula.</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -68,20 +45,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/jstree.min.js"></script>
 
     <script>
+        let currentOu = null;
+        let currentArgs = null;
+
         $(function () {
-            // Inicializa o jsTree
             $('#ouTree').jstree({
                 'core': {
                     'themes': { 'variant': 'large' },
                     'data': {
                         'url': function (node) {
-                            if (node.id === '#') {
-                                // Carrega a raiz
-                                return '/ActiveDirectory/GetOuTree';
-                            } else {
-                                // Carrega sub-OUs dinamicamente
-                                return '/ActiveDirectory/GetOuTree?parentDn=' + encodeURIComponent(node.id);
-                            }
+                            return node.id === '#'
+                                ? '/ActiveDirectory/GetOuTree'
+                                : '/ActiveDirectory/GetOuTree?parentDn=' + encodeURIComponent(node.id);
                         },
                         'dataType': 'json'
                     }
@@ -89,67 +64,44 @@
                 'plugins': ['wholerow']
             });
 
-            // Quando o usuário clicar em uma OU, buscar os usuários dela
             $('#ouTree').on('select_node.jstree', function (e, data) {
-                const ouDn = data.node.id;
-
-                fetch(`/ActiveDirectory/GetUsers?ou=${encodeURIComponent(ouDn)}&recursive=false`)
-                    .then(res => res.json())
-                    .then(users => {
-                        const tbody = $('#userTable tbody');
-                        tbody.empty();
-
-                        if (users.length === 0) {
-                            tbody.append('<tr><td colspan="4" class="text-center text-muted">Nenhum usuário encontrado.</td></tr>');
-                            return;
-                        }
-
-                        users.forEach(u => {
-                            tbody.append(`
-                                <tr>
-                                    <td>${u.name || ''}</td>
-                                    <td>${u.username || ''}</td>
-                                    <td>${u.email || ''}</td>
-                                </tr>
-                            `);
-                        });
-                    })
-                    .catch(err => console.error("Erro ao buscar usuários:", err));
+                currentOu = data.node.id;
+                currentArgs = null;
+                loadUsers(1);
             });
 
-             // Evento de clique no botão Buscar
-            $("#btnBuscar").on("click", function () {
-                var args = $("#args").val();
+            $('#btnBuscar').on('click', function () {
+                const value = $('#args').val().trim();
 
-                $.ajax({
-                    url: '/ActiveDirectory/GetUsers',
-                    type: 'GET',
-                    data: {
-                        args: args,
-                        recursive: true
-                    },
-                    success: function (data) {
-                        $("#userTable tbody").empty();
+                // Se campo está vazio, não faz nada (toast vem do backend)
+                if (!value) {
+                    return;
+                }
 
-                        if (data.length === 0) {
-                            $("#userTable tbody").append("<tr><td colspan='3'>Nenhum usuário encontrado.</td></tr>");
-                        } else {
-                            data.forEach(function (u) {
-                                $("#userTable tbody").append(`
-                                    <tr>
-                                        <td>${u.name}</td>
-                                        <td>${u.username}</td>
-                                        <td>${u.email ?? ''}</td>
-                                    </tr>
-                                `);
-                            });
-                        }
-                    },
-                    error: function () {
-                        alert("Erro ao buscar usuários.");
-                    }
-                });
+                currentOu = null;
+                currentArgs = value;
+                loadUsers(1, true);
+            });
+
+            // Paginação AJAX
+            $(document).on('click', '.pagination a', function (e) {
+                e.preventDefault();
+                const href = $(this).attr('href');
+                const params = new URLSearchParams(href.split('?')[1]);
+                const page = params.get('page') || 1;
+                loadUsers(page);
             });
         });
+
+        function loadUsers(page = 1, recursive = false) {
+            const params = new URLSearchParams({
+                ou: currentOu || '',
+                args: currentArgs || '',
+                recursive: recursive,
+                page: page
+            });
+
+            $('#usersContainer').load(`/ActiveDirectory/UsersTable?${params.toString()}`);
+        }
     </script>
 }

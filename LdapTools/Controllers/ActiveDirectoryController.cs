@@ -2,7 +2,7 @@
 using LdapTools.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using LdapTools.ViewModels;
+using X.PagedList.Extensions;
 
 namespace LdapTools.Controllers
 {
@@ -25,10 +25,23 @@ namespace LdapTools.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetUsers(string? ou, string? args, bool recursive = false)
+        public async Task<IActionResult> UsersTable(string? ou, string? args, bool recursive = false, int? page = 1)
         {
+            // Evita buscar sem OU e sem argumento
+            if (string.IsNullOrWhiteSpace(ou) && string.IsNullOrWhiteSpace(args))
+            {
+                _notyfService.Warning("Informe um nome, matrícula ou selecione uma OU antes de buscar.");
+                return PartialView("_UsersTable", new X.PagedList.PagedList<object>(new List<object>(), 1, 1));
+            }
+
+            const int pageSize = 10;
             var users = await _ldapExplorerService.GetUsersAsync(ou, args, recursive);
-            return Json(users);
+            var pagedUsers = users.ToPagedList(page ?? 1, pageSize);
+
+            ViewBag.OU = ou;
+            ViewBag.Args = args;
+
+            return PartialView("_UsersTable", pagedUsers);
         }
 
         [HttpGet]
@@ -39,7 +52,7 @@ namespace LdapTools.Controllers
             {
                 id = ou.DistinguishedName,
                 text = ou.Name,
-                children = true // diz ao jsTree que pode expandir
+                children = true
             });
 
             return Json(nodes);
