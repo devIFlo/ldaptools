@@ -76,3 +76,27 @@ $('#data-table-logs').DataTable({
     },
     order: [[0, 'desc']]
 });
+
+// Função para validar a imagem
+function validateImage(event) {
+    const file = event.target.files[0];
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/bmp', 'image/webp'];
+
+    if (!allowedTypes.includes(file.type)) {
+        alert('Por favor, selecione um arquivo de imagem válido (JPEG, PNG, BMP ou WebP).');
+        event.target.value = '';
+    } else {
+        previewImage(event);
+    }
+}
+
+// Função para exibir um preview da imagem escolhida
+function previewImage(event) {
+    var reader = new FileReader();
+    reader.onload = function () {
+        var output = document.getElementById('imagePreview');
+        output.src = reader.result;
+        output.style.display = 'block';
+    };
+    reader.readAsDataURL(event.target.files[0]);
+}

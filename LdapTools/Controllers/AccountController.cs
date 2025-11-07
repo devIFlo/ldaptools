@@ -354,5 +354,10 @@ namespace LdapTools.Controllers
         {
             return View();
         }
+
+        public IActionResult PasswordPreview()
+        {
+            return View();
+        }
     }
 }

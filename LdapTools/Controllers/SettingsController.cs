@@ -97,5 +97,11 @@ namespace LdapTools.Controllers
             _notyfService.Warning("Preencha todos os campos obrigatórios.");
             return RedirectToAction("Email");
         }
+
+        [HttpGet]
+        public async Task<IActionResult> Password()
+        {
+            return View();
+        }
     }
 }

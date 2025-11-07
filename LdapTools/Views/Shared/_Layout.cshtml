@@ -78,6 +78,9 @@
                         <li class="sidebar-item">
                             <a class="sidebar-link @(currentController == "Settings" && currentAction == "Email" ? "active" : "")" asp-controller="Settings" asp-action="Email">E-mail</a>
                         </li>
+                        <li class="sidebar-item">
+                            <a class="sidebar-link @(currentController == "Settings" && currentAction == "Password" ? "active" : "")" asp-controller="Settings" asp-action="Password">Recuperação de Senha</a>
+                        </li>
                     </ul>
                 </li>
             </ul>
