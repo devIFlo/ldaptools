@@ -3,6 +3,7 @@ using LdapTools.Models;
 using LdapTools.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace LdapTools.Controllers
 {
@@ -99,9 +100,44 @@ namespace LdapTools.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Password()
+        public IActionResult Password()
         {
             return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Password(IFormFile? logoFile, string primaryColor, string secundaryColor)
+        {
+            var configPath = Path.Combine(Directory.GetCurrentDirectory(), "App_Data", "forgot-config.json");
+
+            // Cria objeto de configuração
+            var config = new ForgotConfig
+            {
+                PrimaryColor = primaryColor,
+                SecundaryColor = secundaryColor
+            };
+
+            // Salva JSON formatado
+            var json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
+            Directory.CreateDirectory(Path.GetDirectoryName(configPath)!);
+            await System.IO.File.WriteAllTextAsync(configPath, json);
+
+            // Substitui a logo se um novo arquivo for enviado
+            if (logoFile != null)
+            {
+                var imageDir = Path.Combine("wwwroot", "images");
+                Directory.CreateDirectory(imageDir);
+
+                var logoPath = Path.Combine(imageDir, "password.png");
+
+                using (var stream = new FileStream(logoPath, FileMode.Create))
+                {
+                    await logoFile.CopyToAsync(stream);
+                }
+            }
+
+            TempData["Success"] = "Configurações salvas com sucesso!";
+            return RedirectToAction("Password");
         }
     }
 }

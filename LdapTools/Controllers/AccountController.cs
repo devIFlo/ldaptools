@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
+using System.Text.Json;
 
 namespace LdapTools.Controllers
 {
@@ -233,8 +234,24 @@ namespace LdapTools.Controllers
             return RedirectToAction("Profile");
         }
 
+        private ForgotConfig LoadForgotConfig()
+        {
+            var configPath = Path.Combine(Directory.GetCurrentDirectory(), "App_Data", "forgot-config.json");
+
+            if (System.IO.File.Exists(configPath))
+            {
+                var json = System.IO.File.ReadAllText(configPath);
+                return JsonSerializer.Deserialize<ForgotConfig>(json)!;
+            }
+
+            return new ForgotConfig(); // valores padrão
+        }
+
         public ActionResult ForgotPassword()
         {
+            var config = LoadForgotConfig();
+            ViewBag.Config = config;
+
             var forgotPasswordViewModel = new ForgotPasswordViewModel
             {
                 FortigateLogin = "false"
@@ -246,6 +263,9 @@ namespace LdapTools.Controllers
         [HttpGet("/Account/ForgotPassword/{fortigateLogin}")]
 		public ActionResult ForgotPassword(string fortigateLogin)
         {
+            var config = LoadForgotConfig();
+            ViewBag.Config = config;
+
             var forgotPasswordViewModel = new ForgotPasswordViewModel
             {
                 FortigateLogin = fortigateLogin
@@ -286,6 +306,9 @@ namespace LdapTools.Controllers
         [HttpGet]
         public async Task<IActionResult> ResetPassword(string token)
         {
+            var config = LoadForgotConfig();
+            ViewBag.Config = config;
+
             var hashedToken = _tokenService.HashToken(token);
 
             var storedToken = await _passwordResetTokenRepository.GetPasswordResetTokenAsync(hashedToken);
@@ -340,24 +363,46 @@ namespace LdapTools.Controllers
         [HttpGet]
         public ActionResult ResetPasswordConfirmation()
         {
+            var config = LoadForgotConfig();
+            ViewBag.Config = config;
+
             return View();
         }
 
         [HttpGet]
         public ActionResult ResetPasswordConfirmationFortigate()
         {
+            var config = LoadForgotConfig();
+            ViewBag.Config = config;
+
             return View();
         }
 
         [HttpGet]
         public ActionResult ExpirationToken()
         {
+            var config = LoadForgotConfig();
+            ViewBag.Config = config;
+
             return View();
         }
 
         public IActionResult PasswordPreview()
         {
-            return View();
+            var configPath = Path.Combine(Directory.GetCurrentDirectory(), "App_Data", "forgot-config.json");
+            ForgotConfig config;
+
+            if (System.IO.File.Exists(configPath))
+            {
+                var json = System.IO.File.ReadAllText(configPath);
+                config = JsonSerializer.Deserialize<ForgotConfig>(json)!;
+            }
+            else
+            {
+                config = new ForgotConfig();
+            }
+
+            return View(config);
         }
     }
 }
