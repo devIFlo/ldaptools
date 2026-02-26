@@ -57,5 +57,40 @@ namespace LdapTools.Controllers
 
             return Json(nodes);
         }
+
+        [HttpGet]
+        public async Task<IActionResult> ImportUsers()
+        {
+            var ous = await _ldapExplorerService.GetAllOusAsync();
+            ViewBag.Ous = ous;
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ImportUsers(IFormFile file, string ou)
+        {
+            if (file == null || file.Length == 0)
+            {
+                ModelState.AddModelError("", "Selecione uma planilha válida.");
+            }
+
+            if (string.IsNullOrEmpty(ou))
+            {
+                ModelState.AddModelError("", "Selecione a OU de destino.");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                ViewBag.Ous = await _ldapExplorerService.GetAllOusAsync();
+                return View();
+            }
+
+            var resultado = await _ldapExplorerService.ImportUsersAsync(file, ou);
+
+            TempData["Mensagem"] = resultado;
+
+            return RedirectToAction(nameof(ImportUsers));
+        }
     }
 }

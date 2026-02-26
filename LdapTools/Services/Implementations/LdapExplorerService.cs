@@ -1,8 +1,11 @@
-﻿using LdapTools.Repositories.Interfaces;
+﻿using ExcelDataReader;
+using LdapTools.Repositories.Interfaces;
 using LdapTools.Services.Interfaces;
 using LdapTools.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
 using Novell.Directory.Ldap;
+using Novell.Directory.Ldap.Utilclass;
+using System.Text;
 
 namespace LdapTools.Services.Implementations
 {
@@ -17,7 +20,7 @@ namespace LdapTools.Services.Implementations
             _protector = dataProtectionProvider.CreateProtector("LdapSettingsPasswordProtector");
         }
 
-        public async Task<List<string>> GetAllOUs()
+        public async Task<List<string>> GetAllOusAsync()
         {
             var lista = new List<string>();
 
@@ -32,7 +35,7 @@ namespace LdapTools.Services.Implementations
                 ldapSettings.BaseDn,
                 LdapConnection.ScopeSub,
                 "(objectClass=organizationalUnit)",
-                new[] { "ou" },
+                new[] { "distinguishedName" },
                 false
             );
 
@@ -41,9 +44,9 @@ namespace LdapTools.Services.Implementations
                 try
                 {
                     var entry = search.Next();
-                    var ou = entry.GetAttribute("ou")?.StringValue;
-                    if (!string.IsNullOrEmpty(ou))
-                        lista.Add(ou);
+                    var dn = entry.GetAttribute("distinguishedName")?.StringValue;
+                    if (!string.IsNullOrEmpty(dn))
+                        lista.Add(dn);
                 }
                 catch (LdapException) { continue; }
             }
@@ -99,7 +102,6 @@ namespace LdapTools.Services.Implementations
             return resultado.OrderBy(u => u.Name).ToList();
         }
 
-
         public async Task<List<OrganizationalUnitViewModel>> GetOuTreeAsync(string? parentDn = null)
         {
             var ldapSettings = await _ldapSettingsRepository.GetLdapSettings();
@@ -144,6 +146,142 @@ namespace LdapTools.Services.Implementations
 
             connection.Disconnect();
             return ous.OrderBy(o => o.Name).ToList();
+        }
+
+        public async Task<string> ImportUsersAsync(IFormFile file, string ou)
+        {
+            int criados = 0;
+            int ignorados = 0;
+            int erros = 0;
+
+            using var stream = new MemoryStream();
+            await file.CopyToAsync(stream);
+            stream.Position = 0;
+
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
+            using var reader = ExcelReaderFactory.CreateReader(stream);
+
+            var result = reader.AsDataSet();
+            var table = result.Tables[0];
+
+            for (int i = 1; i < table.Rows.Count; i++) // pula cabeçalho
+            {
+                try
+                {
+                    string matricula = table.Rows[i][0]?.ToString()?.Trim();
+                    string nome = table.Rows[i][1]?.ToString()?.Trim();
+                    string email = table.Rows[i][2]?.ToString()?.Trim();
+
+                    if (string.IsNullOrWhiteSpace(matricula) ||
+                        string.IsNullOrWhiteSpace(nome))
+                    {
+                        ignorados++;
+                        continue;
+                    }
+
+                    if (!await UserExists(matricula))
+                    {
+                        await CreateUserInAd(matricula, nome, email, ou);
+                        criados++;
+                    }
+                    else
+                    {
+                        ignorados++;
+                    }
+                }
+                catch
+                {
+                    erros++;
+                }
+            }
+
+            return $"Importação finalizada: {criados} criados, {ignorados} ignorados, {erros} erros.";
+        }
+
+        public async Task<bool> UserExists(string username)
+        {
+            var ldapSettings = await _ldapSettingsRepository.GetLdapSettings();
+            var password = ldapSettings.DecryptPassword(_protector);
+
+            using var connection = new LdapConnection();
+            connection.Connect(ldapSettings.FqdnDomain, ldapSettings.Port);
+            connection.Bind($"{ldapSettings.UserDn}@{ldapSettings.FqdnDomain}", password);
+
+            var filter = $"(&(objectClass=user)(sAMAccountName={username}))";
+
+            var search = connection.Search(
+                ldapSettings.BaseDn,
+                LdapConnection.ScopeSub,
+                filter,
+                new[] { "sAMAccountName" },
+                false
+            );
+
+            bool exists = search.HasMore();
+
+            connection.Disconnect();
+
+            return exists;
+        }
+
+        private async Task CreateUserInAd(string matricula, string nome, string email, string ouDn)
+        {
+            var ldapSettings = await _ldapSettingsRepository.GetLdapSettings();
+            var password = ldapSettings.DecryptPassword(_protector);
+
+            using var connection = new LdapConnection();
+
+            connection.SecureSocketLayer = true;
+
+            connection.Connect(ldapSettings.FqdnDomain, 636);
+            connection.Bind($"{ldapSettings.UserDn}@{ldapSettings.FqdnDomain}", password);
+
+            string userDn = $"CN={nome},{ouDn}";
+
+            var attributes = new LdapAttributeSet
+            {
+                new LdapAttribute("objectClass", new string[] { "top", "person", "organizationalPerson", "user" }),
+                new LdapAttribute("cn", nome),
+                new LdapAttribute("sAMAccountName", matricula),
+                new LdapAttribute("userPrincipalName", $"{matricula}@{ldapSettings.FqdnDomain}"),
+                new LdapAttribute("displayName", nome),
+                new LdapAttribute("mail", email ?? ""),
+                new LdapAttribute("userAccountControl", "544") // Criado desabilitado
+            };
+
+            var newUser = new LdapEntry(userDn, attributes);
+
+            connection.Add(newUser);
+
+            // DEFINIR SENHA
+            string senha = "Senha2023"; // você pode gerar dinâmica
+            var senhaBytes = Encoding.Unicode.GetBytes($"\"{senha}\"");
+
+            var modSenha = new LdapModification(
+                LdapModification.Replace,
+                new LdapAttribute("unicodePwd", senhaBytes)
+            );
+
+            connection.Modify(userDn, modSenha);
+
+            // HABILITAR USUÁRIO (NORMAL_ACCOUNT = 512)
+            var modEnable = new LdapModification(
+                LdapModification.Replace,
+                new LdapAttribute("userAccountControl", "512")
+            );
+
+            connection.Modify(userDn, modEnable);
+
+            // ALTERAR A SENHA NO PRIMEIRO LOGON
+            var modForceChange = new LdapModification(
+                LdapModification.Replace,
+                new LdapAttribute("pwdLastSet", "0")
+            );
+
+            connection.Modify(userDn, modForceChange);
+
+            connection.Disconnect();
         }
     }
 }

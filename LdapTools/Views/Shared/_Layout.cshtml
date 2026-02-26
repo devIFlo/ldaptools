@@ -57,6 +57,9 @@
                          <li class="sidebar-item">
                             <a class="sidebar-link @(currentController == "ActiveDirectory" && currentAction == "Group" ? "active" : "")" asp-controller="ActiveDirectory" asp-action="Group">Grupos</a>
                         </li> 
+                        <li class="sidebar-item">
+                            <a class="sidebar-link @(currentController == "ActiveDirectory" && currentAction == "ImportUsers" ? "active" : "")" asp-controller="ActiveDirectory" asp-action="ImportUsers">Importar Usuários</a>
+                        </li>
                     </ul>
                 </li>
                 <li class="sidebar-item">

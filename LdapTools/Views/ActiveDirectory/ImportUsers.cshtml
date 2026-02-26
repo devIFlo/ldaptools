@@ -1,0 +1,69 @@
+﻿@{
+    ViewData["Title"] = "Importar Usuários";
+    var ous = ViewBag.Ous as List<string>;
+}
+
+<header class="header header-sticky p-0 mb-4">
+    <div class="container-fluid px-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb my-0">
+                <li class="breadcrumb-item">
+                    <a asp-controller="Home" asp-action="Index">Início</a>
+                </li>
+                <li class="breadcrumb-item active">
+                    <span>Active Directory</span>
+                </li>
+                <li class="breadcrumb-item active">
+                    <span data-coreui-i18n="dashboard">Importar Usuários</span>
+                </li>
+            </ol>
+        </nav>
+    </div>
+</header>
+
+
+<div>
+    <div class="container-lg px-4">
+        <div class="card mb-4">
+            <div class="card-header"><strong>@ViewData["Title"]</strong></div>
+            <div class="card-body">
+                @if (TempData["Mensagem"] != null)
+                {
+                    <div class="alert alert-success">
+                        @TempData["Mensagem"]
+                    </div>
+                }
+
+                <form id="formImportUsers" asp-action="ImportUsers"
+                      asp-controller="ActiveDirectory"
+                      method="post"
+                      enctype="multipart/form-data">
+
+                    @Html.AntiForgeryToken()
+
+                    <div class="mb-3">
+                        <label class="form-label">OU de Destino</label>
+                        <select name="ou" class="form-select">
+                            <option value="">Selecione uma OU</option>
+                            @foreach (var ou in ous)
+                            {
+                                <option value="@ou">@ou</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Planilha (.xls ou .xlsx)</label>
+                        <input type="file"
+                               name="file"
+                               class="form-control"
+                               accept=".xls, .xlsx" />
+                    </div>
+                </form>
+            </div>
+            <div class="form-group modal-footer">
+                <input type="submit" form="formImportUsers" value="Importar Usuários" class="btn btn-success" />
+            </div>
+        </div>
+    </div>
+</div>
