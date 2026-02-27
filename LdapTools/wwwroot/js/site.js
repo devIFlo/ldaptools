@@ -69,14 +69,6 @@ function initModalSelect(modalId) {
 
 initModalSelect('#modalUsersImport');
 
-// DataTables da página de Logs
-$('#data-table-logs').DataTable({
-    language: {
-        url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/pt-BR.json'
-    },
-    order: [[0, 'desc']]
-});
-
 // Função para validar a imagem
 function validateImage(event) {
     const file = event.target.files[0];

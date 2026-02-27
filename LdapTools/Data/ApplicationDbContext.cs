@@ -22,7 +22,7 @@ namespace LdapTools.Data
             modelBuilder.Entity<LogEntry>(entity =>
             {
                 entity.Property(e => e.Message).HasColumnType("TEXT").IsRequired(false);
-                entity.Property(e => e.Level).HasColumnType("INTEGER").IsRequired(false);
+                entity.Property(e => e.Level).HasColumnType("INTEGER").IsRequired();
                 entity.Property(e => e.Timestamp).HasColumnType("TIMESTAMP").IsRequired(false);
                 entity.Property(e => e.Exception).HasColumnType("TEXT").IsRequired(false);
                 entity.Property(e => e.Properties).HasColumnType("JSONB").IsRequired(false);
